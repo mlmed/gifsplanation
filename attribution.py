@@ -7,18 +7,21 @@ import skimage, skimage.filters
 import captum, captum.attr
 import torch, torch.nn
 import pickle
+import pandas as pd
 
 
-def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False, p=0.0, ae=None):
+def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False, p=0.0, ae=None, sigma=0):
     
     image = image.clone().detach()
     
-    def blur(saliency):
-        sigma = 5
-        saliency = skimage.filters.gaussian(saliency, 
-                    mode='constant', 
-                    sigma=(sigma, sigma), 
-                    truncate=3.5)
+    def clean(saliency):
+        saliency = np.abs(saliency)
+        #saliency = threshold(saliency, 95)
+        if sigma > 0:
+            saliency = skimage.filters.gaussian(saliency, 
+                        mode='constant', 
+                        sigma=(sigma, sigma), 
+                        truncate=3.5)
         return saliency
     
     if "latentshift" in method:
@@ -48,7 +51,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
             #print("lbound",lbound, "last_pred",last_pred, "cur_pred",cur_pred)
             if last_pred < cur_pred:
                 break
-            if initial_pred-0.2 > cur_pred:
+            if initial_pred-0.5 > cur_pred:
                 break
             if lbound <= -1000:
                 break
@@ -63,7 +66,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
             #print(rbound, last_pred, cur_pred)
             if last_pred > cur_pred:
                 break
-            if initial_pred+0.05 < cur_pred:
+            if initial_pred+0.1 < cur_pred:
                 break
             if rbound >= 1000:
                 break
@@ -127,7 +130,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
                 dimages.append(np.abs(diffs[0] - diffs[1]))
             dimage = np.mean(dimages,0)
             
-        dimage = blur(dimage**2)
+        dimage = clean(dimage)
         return dimage
     
     
@@ -135,8 +138,8 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
         image.requires_grad = True
         pred = clf(image)[:,clf.pathologies.index(target)]
         dimage = torch.autograd.grad(torch.abs(pred), image)[0]
-        dimage = np.abs(dimage[0][0].detach().cpu())
-        dimage = blur(dimage**2)
+        dimage = dimage.detach().cpu().numpy()[0][0]
+        dimage = clean(dimage)
         return dimage
     
     if method == "integrated":
@@ -147,7 +150,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
                                 return_convergence_delta=False, 
                                 internal_batch_size=1)
         dimage = dimage.detach().cpu().numpy()[0][0]
-        dimage = blur(dimage**2)
+        dimage = clean(dimage)
         return dimage
     
     if method == "guided":
@@ -155,7 +158,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
         attr = captum.attr.GuidedBackprop(clf)
         dimage = attr.attribute(image, target=clf.pathologies.index(target))
         dimage = dimage.detach().cpu().numpy()[0][0]
-        dimage = blur(dimage**2)
+        dimage = clean(dimage)
         return dimage
     
 def threshold(x, percentile):
@@ -172,7 +175,7 @@ def calc_iou(locs, segs):
     return {"iou":iou, "iop":iop,"iot":iot}
 
 
-def run_eval(target, data, model, ae, limit = 10):
+def run_eval(target, data, model, ae, pthresh = 0, limit = 20):
     dwhere = np.where(data.csv.has_masks & (data.labels[:,data.pathologies.index(target)]  == 1))[0]
     results = []
     for method in [
@@ -180,7 +183,7 @@ def run_eval(target, data, model, ae, limit = 10):
 #                    "latentshift-mean", 
 #                    "latentshift-mm", 
 #                    "latentshift-int",
-#                   "grad", "integrated", "guided"
+                   "grad", "integrated", "guided"
                     ]:
         count = 0
         for idx in dwhere:
@@ -194,9 +197,10 @@ def run_eval(target, data, model, ae, limit = 10):
             image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
             p = model(image)[:,model.pathologies.index(target)].detach().cpu()
             #print(p)
-            if p > 0.5:
+            if p > pthresh:
                 dimage = compute_attribution(image, method, model, target, ae=ae)
-                metrics = calc_iou(dimage,sample["pathology_masks"][data.pathologies.index(target)][0])
+                #print(method, dimage.shape)
+                metrics = calc_iou(dimage, sample["pathology_masks"][data.pathologies.index(target)][0])
                 metrics["idx"] = idx
                 metrics["target"] = target
                 metrics["method"] = method
@@ -204,4 +208,11 @@ def run_eval(target, data, model, ae, limit = 10):
                 count += 1
                 if count > limit:
                     break
-    return results
+    return pd.DataFrame(results)
+
+
+
+
+
+
+
