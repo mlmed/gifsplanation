@@ -19,7 +19,7 @@ import pandas as pd
 
 
 
-def get_data():
+def get_data(dataset_str):
     
     dataset_dir = "/home/groups/akshaysc/joecohen/"
     
@@ -29,34 +29,37 @@ def get_data():
     
     datasets = []
     
-    # dataset = xrv.datasets.COVID19_Dataset(
-    #     imgpath=dataset_dir + "/covid-chestxray-dataset/images",
-    #     csvpath=dataset_dir + "/covid-chestxray-dataset/metadata.csv",
-    #     transform=transform)
-    # datasets.append(dataset)
+    if "covid" in dataset_str:
+        dataset = xrv.datasets.COVID19_Dataset(
+            imgpath=dataset_dir + "/covid-chestxray-dataset/images",
+            csvpath=dataset_dir + "/covid-chestxray-dataset/metadata.csv",
+            transform=transform)
+        datasets.append(dataset)
 
-    
-    dataset = xrv.datasets.PC_Dataset(
-        imgpath=dataset_dir + "/PC/images-224",
-        transform=transform, unique_patients=False)
-    datasets.append(dataset)
+    if "pc" in dataset_str:
+        dataset = xrv.datasets.PC_Dataset(
+            imgpath=dataset_dir + "/PC/images-224",
+            transform=transform, unique_patients=False)
+        datasets.append(dataset)
 
-
-    dataset = xrv.datasets.RSNA_Pneumonia_Dataset(
-        imgpath=dataset_dir + "/kaggle-pneumonia-jpg/stage_2_train_images_jpg",
-        transform=transform,unique_patients=False, pathology_masks=True)
-    datasets.append(dataset)
-
-    dataset = xrv.datasets.NIH_Dataset(
-        imgpath=dataset_dir + "/NIH/images-224", 
-        transform=transform, unique_patients=False, pathology_masks=True)
-    datasets.append(dataset)
-
-    dataset = xrv.datasets.SIIM_Pneumothorax_Dataset(
-        imgpath=dataset_dir + "SIIM_TRAIN_TEST/dicom-images-train/",
-        csvpath=dataset_dir + "SIIM_TRAIN_TEST/train-rle.csv",
-        transform=transform, unique_patients=False, masks=True)
-    datasets.append(dataset)
+    if "rsna" in dataset_str:
+        dataset = xrv.datasets.RSNA_Pneumonia_Dataset(
+            imgpath=dataset_dir + "/kaggle-pneumonia-jpg/stage_2_train_images_jpg",
+            transform=transform,unique_patients=False, pathology_masks=True)
+        datasets.append(dataset)
+        
+    if "nih" in dataset_str:
+        dataset = xrv.datasets.NIH_Dataset(
+            imgpath=dataset_dir + "/NIH/images-224", 
+            transform=transform, unique_patients=False, pathology_masks=True)
+        datasets.append(dataset)
+        
+    if "siim" in dataset_str: 
+        dataset = xrv.datasets.SIIM_Pneumothorax_Dataset(
+            imgpath=dataset_dir + "SIIM_TRAIN_TEST/dicom-images-train/",
+            csvpath=dataset_dir + "SIIM_TRAIN_TEST/train-rle.csv",
+            transform=transform, unique_patients=False, masks=True)
+        datasets.append(dataset)
 
 
 
