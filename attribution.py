@@ -4,24 +4,28 @@ from torch.nn import functional as F
 import glob
 import numpy as np
 import skimage, skimage.filters
+import sklearn, sklearn.metrics
 import captum, captum.attr
 import torch, torch.nn
 import pickle
 import pandas as pd
+import shutil
+import os,sys
 
 
-def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False, p=0.0, ae=None, sigma=0):
+def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False, p=0.0, ae=None, sigma=0, threshold=False):
     
     image = image.clone().detach()
     
     def clean(saliency):
         saliency = np.abs(saliency)
-        #saliency = threshold(saliency, 95)
         if sigma > 0:
             saliency = skimage.filters.gaussian(saliency, 
                         mode='constant', 
                         sigma=(sigma, sigma), 
                         truncate=3.5)
+        if threshold:
+            saliency = thresholdf(saliency, 95)
         return saliency
     
     if "latentshift" in method:
@@ -41,11 +45,15 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
             return cache[lam]
         
         #determine range
-        initial_pred = pred.detach().cpu().numpy()
+        #initial_pred = pred.detach().cpu().numpy()
+        _, initial_pred = compute_shift(0)
+        
+        #search params
+        step = 10
         
         #left range
         lbound = 0
-        last_pred = pred.detach().cpu().numpy()
+        last_pred = initial_pred
         while True:
             xpp, cur_pred = compute_shift(lbound)
             #print("lbound",lbound, "last_pred",last_pred, "cur_pred",cur_pred)
@@ -56,14 +64,17 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
             if lbound <= -1000:
                 break
             last_pred = cur_pred
-            lbound = lbound - 10
+            if np.abs(lbound) < step:
+                lbound = lbound - 1
+            else:
+                lbound = lbound - step
             
         #right range
         rbound = 0
-        last_pred = pred.detach().cpu().numpy()
+        last_pred = initial_pred
         while True:
             xpp, cur_pred = compute_shift(rbound)
-            #print(rbound, last_pred, cur_pred)
+            #print("rbound",rbound, "last_pred",last_pred, "cur_pred",cur_pred)
             if last_pred > cur_pred:
                 break
             if initial_pred+0.1 < cur_pred:
@@ -71,7 +82,10 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
             if rbound >= 1000:
                 break
             last_pred = cur_pred
-            rbound = rbound + 10
+            if np.abs(rbound) < step:
+                rbound = rbound + 1
+            else:
+                rbound = rbound + step
         
 #         rang = 5
 #         lambdas = np.arange(-rang,rang+1,rang//5)
@@ -161,21 +175,22 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
         dimage = clean(dimage)
         return dimage
     
-def threshold(x, percentile):
+def thresholdf(x, percentile):
     return x * (x > np.percentile(x, percentile))
 
-def calc_iou(locs, segs):
-    segs = segs.astype(np.bool)
-    seg_area_percent = (segs > 0).sum()/(segs != -1).sum() # percent of area
-    locs = (threshold(locs, (1-seg_area_percent)*100) > 0).astype(np.bool) #
-    EPS = 10e-16
-    iou = (segs & locs).sum() / ((segs | locs).sum() + EPS)                          
-    iop = (segs & locs).sum() / (locs.sum() + EPS)                               
-    iot = (segs & locs).sum() / (segs.sum() + EPS)       
-    return {"iou":iou, "iop":iop,"iot":iot}
+def calc_iou(preds, gt_seg):
+    gt_seg = gt_seg.astype(np.bool)
+    seg_area_percent = (gt_seg > 0).sum()/(gt_seg != -1).sum() # percent of area
+    preds = (thresholdf(preds, (1-seg_area_percent)*100) > 0).astype(np.bool)
+    #EPS = 10e-16
+    ret = {}
+    ret["iou"] = (gt_seg & preds).sum() / ((gt_seg | preds).sum())
+    ret["precision"] = sklearn.metrics.precision_score(gt_seg.flatten(),preds.flatten())
+    ret["recall"] = sklearn.metrics.recall_score(gt_seg.flatten(),preds.flatten())  
+    return ret
 
 
-def run_eval(target, data, model, ae, pthresh = 0, limit = 20):
+def run_eval(target, data, model, ae, pthresh = 0, limit = 40):
     dwhere = np.where(data.csv.has_masks & (data.labels[:,data.pathologies.index(target)]  == 1))[0]
     results = []
     for method in [
@@ -211,7 +226,59 @@ def run_eval(target, data, model, ae, pthresh = 0, limit = 20):
     return pd.DataFrame(results)
 
 
+def generate_video(image, model, target, ae, temp_path, note="", show=False):
+    
+    dimgs = compute_attribution(image.cuda(), "latentshift", model, target, ret_dimgs=True, ae=ae)
+    
+    #ffmpeg -i gif-tmp/image-%d-a.png -vcodec libx264 aout.mp4
+    temp_path = "/lscratch/joecohen/SDS-2342-ASDAA"
+    shutil.rmtree(temp_path, ignore_errors=True) 
+    towrite = list(dimgs) + list(reversed(dimgs))
+    img = image[0][0].cpu().numpy()
 
+    for idx, dimg in enumerate(towrite):
+        if idx % 10 == 0:
+            print(idx)
+        p = model(torch.from_numpy(dimg).cuda())[0,model.pathologies.index(target)].detach().cpu().numpy()
+        name = "a"
+        fig = plt.Figure(figsize=(10, 6), dpi=50)
+        gcf = plt.gcf()
+        gcf.set_size_inches(10, 6)
+        fig.set_canvas(gcf.canvas)
+        plt.imshow(np.concatenate([img,dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
+        #plt.imshow(np.concatenate([dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
+        plt.title("Pred of {}: {:.2f}".format(target, p),fontsize=25)
+        plt.axis('off')
+        if not os.path.exists(temp_path): 
+            os.mkdir(temp_path)
+        for k in range(3):
+            i = idx + len(towrite)*k
+            fig.savefig(temp_path +'/image-' + str(i) + "-" + name + '.png', bbox_inches='tight', pad_inches=0, transparent=False)
+            
+    target_filename = "videos/single-{}_{}_{}_{}".format(
+        target,
+        str(ae),
+        str(model),
+        note)
+
+    cmd = "module load ffmpeg;ffmpeg -loglevel quiet -stats -y -i {}/image-%d-a.png -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p '{}.mp4'".format(temp_path,target_filename)
+    
+    print(cmd)
+    os.system(cmd)
+    
+    if show:
+        from IPython.display import Video
+        return Video(target_filename + ".mp4", embed=True)
+    else:
+        return target_filename + ".mp4"
+
+    
+    
+    
+    
+    
+    
+    
 
 
 
