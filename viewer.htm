@@ -1,0 +1,84 @@
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap-theme.min.css" rel="stylesheet">
+</head>
+
+<style>
+td {
+text-align: center;
+
+}
+.main td {
+width:16%
+}
+.main img {
+width:100%
+}
+.main video {
+width:100%
+}
+img {
+image-rendering: pixelated;
+}
+</style>
+
+Study: CheXpert-v1.0-small_train_patient00009_study1_view1_frontal<br>
+Prediction: Cardiomegaly 78%
+<table>
+	<tr class="main">
+		<td class="option">Input image <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-image.png" /></td>
+		<td class="option">grad <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-grad.png" /></td>
+		<td class="option">guided <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-guided.png" /></td>
+		<td class="option">integrated <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-integrated.png" /></td>
+		<td class="option">latentshift-2D <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-latentshift-max.png" /></td>
+		<td class="option">latentshift <video style="width:100%"  autoplay loop muted>
+				<source
+					src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-latentshift.mp4"
+					type="video/mp4">
+				Your browser does not support the video tag.
+			</video></td>
+	</tr>
+</table>
+<hr>
+<div id="viewer">
+Click to view an image<Br>
+<img style="width:1000px" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-image.png" />
+</div>
+
+
+<script>
+
+var getUrlParameter = function getUrlParameter(sParam) {
+    var sPageURL = window.location.search.substring(1),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+        }
+    }
+};
+    
+    
+var img = getUrlParameter("img")
+console.log(img)
+//console.log($.get("images/" + img + ".json"))
+    
+$(".option").click(function(){
+	
+	$("#viewer").empty()
+	thing = $(this).clone()
+	thing = thing.css("width","1000px")
+	$("#viewer").append(thing)
+});
+
+	
+</script>
+
+
