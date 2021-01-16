@@ -22,10 +22,19 @@ width:100%
 img {
 image-rendering: pixelated;
 }
-</style>
 
+body {
+min-width:1000px
+}
+
+</style>
+<div style="width:100%;height:50px">
+<img style="float:right;height:50px" src="assets/aimi-logo.png" />
+<img style="float:right;height:50px" src="assets/stanford-logo2.png" />
 Study: <span id="study"></span><br>
 Prediction: <span id="pred"></span>
+
+</div>
 <hr>
 <table>
 	<tr class="main">
@@ -33,7 +42,7 @@ Prediction: <span id="pred"></span>
 		<td class="option">grad <img id="grad" style="width:100%" /></td>
 		<td class="option">guided <img id="guided" style="width:100%"/></td>
 		<td class="option">integrated <img id="integrated" style="width:100%" /></td>
-		<td class="option">latentshift-2D <img id="latentshift-max" style="width:100%" /></td>
+		<td class="option">latentshift-2d <img id="latentshift-max" style="width:100%" /></td>
 		<td class="option">latentshift <video style="width:100%"  autoplay loop muted>
 				<source id="latentshift" type="video/mp4">
 				Your browser does not support the video tag.
