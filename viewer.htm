@@ -24,19 +24,18 @@ image-rendering: pixelated;
 }
 </style>
 
-Study: CheXpert-v1.0-small_train_patient00009_study1_view1_frontal<br>
-Prediction: Cardiomegaly 78%
+Study: <span id="study"></span><br>
+Prediction: <span id="pred"></span>
+<hr>
 <table>
 	<tr class="main">
-		<td class="option">Input image <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-image.png" /></td>
-		<td class="option">grad <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-grad.png" /></td>
-		<td class="option">guided <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-guided.png" /></td>
-		<td class="option">integrated <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-integrated.png" /></td>
-		<td class="option">latentshift-2D <img style="width:100%" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-latentshift-max.png" /></td>
+		<td class="option">Input image <img id="image" style="width:100%" /></td>
+		<td class="option">grad <img id="grad" style="width:100%" /></td>
+		<td class="option">guided <img id="guided" style="width:100%"/></td>
+		<td class="option">integrated <img id="integrated" style="width:100%" /></td>
+		<td class="option">latentshift-2D <img id="latentshift-max" style="width:100%" /></td>
 		<td class="option">latentshift <video style="width:100%"  autoplay loop muted>
-				<source
-					src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-latentshift.mp4"
-					type="video/mp4">
+				<source id="latentshift" type="video/mp4">
 				Your browser does not support the video tag.
 			</video></td>
 	</tr>
@@ -44,7 +43,6 @@ Prediction: Cardiomegaly 78%
 <hr>
 <div id="viewer">
 Click to view an image<Br>
-<img style="width:1000px" src="images/CheXpert-v1.0-small_train_patient00009_study1_view1_frontal-Cardiomegaly-1-image.png" />
 </div>
 
 
@@ -67,8 +65,25 @@ var getUrlParameter = function getUrlParameter(sParam) {
     
     
 var img = getUrlParameter("img")
-console.log(img)
-//console.log($.get("images/" + img + ".json"))
+$("#study").text("Loading...");
+$.getJSON("images/" + img + ".json", function( data ) {
+	console.log(data);
+	thisdata = data
+	$("#image")[0].src = data.attribs["image"]
+	$("#grad")[0].src = data.attribs["grad"]
+	$("#integrated")[0].src = data.attribs["integrated"]
+	$("#guided")[0].src = data.attribs["guided"]
+	$("#latentshift-max")[0].src = data.attribs["latentshift-max"]
+	$("#latentshift")[0].src = data.attribs["latentshift"]
+	$("#latentshift").parent()[0].load()
+	
+	$("#study").text(data["id"])
+	
+	$("#pred").text(thisdata["target"] + " -> " + parseFloat(thisdata["pred"].toFixed(2)))
+	
+	}).fail(function() {
+		$("#study").text("Failed loading this study!!!!");
+	  });
     
 $(".option").click(function(){
 	
