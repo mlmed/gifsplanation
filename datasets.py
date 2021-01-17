@@ -19,12 +19,15 @@ import pandas as pd
 
 
 
-def get_data(dataset_str):
+def get_data(dataset_str, transforms=True):
     
     dataset_dir = "/home/groups/akshaysc/joecohen/"
     
-    transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
-                                            xrv.datasets.XRayResizer(224)])
+    if transforms:
+        transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
+                                                xrv.datasets.XRayResizer(224)])
+    else:
+        transform = None
     
     
     datasets = []
@@ -60,6 +63,29 @@ def get_data(dataset_str):
             csvpath=dataset_dir + "SIIM_TRAIN_TEST/train-rle.csv",
             transform=transform, unique_patients=False, masks=True)
         datasets.append(dataset)
+        
+    if "chex" in dataset_str:
+        dataset = xrv.datasets.CheX_Dataset(
+            imgpath=dataset_dir + "/CheXpert-v1.0-small",
+            csvpath=dataset_dir + "/CheXpert-v1.0-small/train.csv",
+            transform=transform, unique_patients=False)
+        datasets.append(dataset)
+        
+    if "google" in dataset_str:
+        dataset = xrv.datasets.NIH_Google_Dataset(
+            imgpath=dataset_dir + "/NIH/images-224",
+            transform=transform)
+        datasets.append(dataset)
+        
+    if "mimic_ch" in dataset_str:
+        dataset = xrv.datasets.MIMIC_Dataset(
+            imgpath=dataset_dir + "/images-224-MIMIC/files",
+            csvpath=dataset_dir + "/MIMICCXR-2.0/mimic-cxr-2.0.0-chexpert.csv.gz",
+            metacsvpath=dataset_dir + "/MIMICCXR-2.0/mimic-cxr-2.0.0-metadata.csv.gz",
+            transform=transform, unique_patients=False)
+        datasets.append(dataset)
+        
+        
 
 
 
@@ -72,8 +98,11 @@ def get_data(dataset_str):
     #print("labels",list(newlabels))
     for d in datasets:
         xrv.datasets.relabel_dataset(list(newlabels), d, silent=True)
-        
-    dmerge = xrv.datasets.Merge_Dataset(datasets)
+    
+    if len(datasets) > 1:
+        dmerge = xrv.datasets.Merge_Dataset(datasets)
+    else:
+        dmerge = datasets[0]
     
     print(dmerge.string())
     

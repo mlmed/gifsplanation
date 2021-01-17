@@ -13,7 +13,7 @@ import shutil
 import os,sys
 
 
-def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False, p=0.0, ae=None, sigma=0, threshold=False):
+def compute_attribution(image, method, clf, target, plot=False, ret_params=False, fixrange=None, p=0.0, ae=None, sigma=0, threshold=False):
     
     image = image.clone().detach()
     
@@ -48,72 +48,70 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
         #initial_pred = pred.detach().cpu().numpy()
         _, initial_pred = compute_shift(0)
         
-        #search params
-        step = 10
         
-        #left range
-        lbound = 0
-        last_pred = initial_pred
-        while True:
-            xpp, cur_pred = compute_shift(lbound)
-            #print("lbound",lbound, "last_pred",last_pred, "cur_pred",cur_pred)
-            if last_pred < cur_pred:
-                break
-            if initial_pred-0.5 > cur_pred:
-                break
-            if lbound <= -1000:
-                break
-            last_pred = cur_pred
-            if np.abs(lbound) < step:
-                lbound = lbound - 1
-            else:
-                lbound = lbound - step
-            
-        #right range
-        rbound = 0
-        last_pred = initial_pred
-        while True:
-            xpp, cur_pred = compute_shift(rbound)
-            #print("rbound",rbound, "last_pred",last_pred, "cur_pred",cur_pred)
-            if last_pred > cur_pred:
-                break
-            if initial_pred+0.1 < cur_pred:
-                break
-            if rbound >= 1000:
-                break
-            last_pred = cur_pred
-            if np.abs(rbound) < step:
-                rbound = rbound + 1
-            else:
-                rbound = rbound + step
+        if fixrange:
+            lbound,rbound = fixrange
+        else:
+            #search params
+            step = 10
+
+            #left range
+            lbound = 0
+            last_pred = initial_pred
+            while True:
+                xpp, cur_pred = compute_shift(lbound)
+                #print("lbound",lbound, "last_pred",last_pred, "cur_pred",cur_pred)
+                if last_pred < cur_pred:
+                    break
+                if initial_pred-0.5 > cur_pred:
+                    break
+                if lbound <= -1000:
+                    break
+                last_pred = cur_pred
+                if np.abs(lbound) < step:
+                    lbound = lbound - 1
+                else:
+                    lbound = lbound - step
+
+            #right range
+            rbound = 0
+            last_pred = initial_pred
+            while True:
+                xpp, cur_pred = compute_shift(rbound)
+                #print("rbound",rbound, "last_pred",last_pred, "cur_pred",cur_pred)
+                if last_pred > cur_pred:
+                    break
+                if initial_pred+0.05 < cur_pred:
+                    break
+                if rbound >= 1000:
+                    break
+                last_pred = cur_pred
+                if np.abs(rbound) < step:
+                    rbound = rbound + 1
+                else:
+                    rbound = rbound + step
         
-#         rang = 5
-#         lambdas = np.arange(-rang,rang+1,rang//5)
         print(initial_pred, lbound,rbound)
         #lambdas = np.arange(lbound,rbound,(rbound+np.abs(lbound))//10)
-        lambdas = np.arange(lbound,rbound,np.abs((lbound-rbound)/10))
+        lambdas = np.arange(lbound,rbound+1,np.abs((lbound-rbound)/10))
         ###########################
         
         y = []
-        diffs = []
         dimgs = []
         xp = ae.decode(z)[0][0].unsqueeze(0).unsqueeze(0).detach()
         for lam in lambdas:
             
             xpp, pred = compute_shift(lam)
-            
-            #xpp = ae.decode(z+dzdxp*lam).detach()
             dimgs.append(xpp.cpu().numpy())
-            
-            #pred = clf((image*p + xpp*(1-p)))[:,clf.pathologies.index(target)]
             y.append(pred)
             
-            diff = xpp.cpu()[0][0]
-            #diff = np.abs((xp-xpp).cpu()[0][0])
-            diffs.append(diff.numpy())  
-        #return diffs
-        if ret_dimgs:
-            return dimgs
+        if ret_params:
+            params = {}
+            params["dimgs"] = dimgs
+            params["lambdas"] = lambdas
+            params["y"] = y
+            params["initial_pred"] = initial_pred
+            return params
         
         if plot:
             
@@ -133,15 +131,15 @@ def compute_attribution(image, method, clf, target, plot=False, ret_dimgs=False,
             plt.show()
         
         if "-max" in method:
-            dimage = np.max(np.abs(xp.cpu().numpy()[0][0] - diffs),0)
+            dimage = np.max(np.abs(xp.cpu().numpy()[0][0] - dimgs[0][0]),0)
         if "-mean" in method:
-            dimage = np.mean(np.abs(xp.cpu().numpy()[0][0] - diffs),0)
+            dimage = np.mean(np.abs(xp.cpu().numpy()[0][0] - dimgs[0][0]),0)
         if "-mm" in method:
-            dimage = np.abs(diffs[0] - diffs[-1])
+            dimage = np.abs(dimgs[0][0][0] - dimgs[0][0][-1])
         if "-int" in method:
             dimages = []
-            for i in range(len(diffs)):
-                dimages.append(np.abs(diffs[0] - diffs[1]))
+            for i in range(len(dimgs)):
+                dimages.append(np.abs(dimgs[0][0][0] - dimgs[0][0][1]))
             dimage = np.mean(dimages,0)
             
         dimage = clean(dimage)
@@ -226,9 +224,10 @@ def run_eval(target, data, model, ae, pthresh = 0, limit = 40):
     return pd.DataFrame(results)
 
 
-def generate_video(image, model, target, ae, temp_path, note="", show=False):
+def generate_video(image, model, target, ae, temp_path, target_filename=None, border=True, note="", show=False):
     
-    dimgs = compute_attribution(image.cuda(), "latentshift", model, target, ret_dimgs=True, ae=ae)
+    params = compute_attribution(image.cuda(), "latentshift", model, target, ret_params=True, ae=ae)
+    dimgs = params["dimgs"]
     
     #ffmpeg -i gif-tmp/image-%d-a.png -vcodec libx264 aout.mp4
     temp_path = "/lscratch/joecohen/SDS-2342-ASDAA"
@@ -239,27 +238,31 @@ def generate_video(image, model, target, ae, temp_path, note="", show=False):
     for idx, dimg in enumerate(towrite):
         if idx % 10 == 0:
             print(idx)
+            
         p = model(torch.from_numpy(dimg).cuda())[0,model.pathologies.index(target)].detach().cpu().numpy()
-        name = "a"
         fig = plt.Figure(figsize=(10, 6), dpi=50)
         gcf = plt.gcf()
         gcf.set_size_inches(10, 6)
         fig.set_canvas(gcf.canvas)
-        plt.imshow(np.concatenate([img,dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
-        #plt.imshow(np.concatenate([dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
-        plt.title("Pred of {}: {:.2f}".format(target, p),fontsize=25)
+        if border:
+            plt.imshow(np.concatenate([img,dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
+            plt.title("Pred of {}: {:.2f}".format(target, p),fontsize=25)
+        else:
+            plt.imshow(dimg[0][0], interpolation='none', cmap='Greys_r')
         plt.axis('off')
+        
         if not os.path.exists(temp_path): 
             os.mkdir(temp_path)
         for k in range(3):
             i = idx + len(towrite)*k
-            fig.savefig(temp_path +'/image-' + str(i) + "-" + name + '.png', bbox_inches='tight', pad_inches=0, transparent=False)
-            
-    target_filename = "videos/single-{}_{}_{}_{}".format(
-        target,
-        str(ae),
-        str(model),
-        note)
+            fig.savefig(temp_path +'/image-' + str(i) + '-a.png', bbox_inches='tight', pad_inches=0, transparent=False)
+      
+    if not target_filename:
+        target_filename = "videos/single-{}_{}_{}_{}".format(
+            target,
+            str(ae),
+            str(model),
+            note)
 
     cmd = "module load ffmpeg;ffmpeg -loglevel quiet -stats -y -i {}/image-%d-a.png -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p '{}.mp4'".format(temp_path,target_filename)
     
