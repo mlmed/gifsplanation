@@ -158,7 +158,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
         attr = captum.attr.IntegratedGradients(clf)
         dimage = attr.attribute(image, 
                                 target=clf.pathologies.index(target),
-                                n_steps=50, 
+                                n_steps=100, 
                                 return_convergence_delta=False, 
                                 internal_batch_size=1)
         dimage = dimage.detach().cpu().numpy()[0][0]

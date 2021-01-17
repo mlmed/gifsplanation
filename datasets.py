@@ -19,13 +19,13 @@ import pandas as pd
 
 
 
-def get_data(dataset_str, transforms=True):
+def get_data(dataset_str, transforms=True, size=224):
     
     dataset_dir = "/home/groups/akshaysc/joecohen/"
     
     if transforms:
         transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
-                                                xrv.datasets.XRayResizer(224)])
+                                                xrv.datasets.XRayResizer(size)])
     else:
         transform = None
     
