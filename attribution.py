@@ -190,16 +190,20 @@ def calc_iou(preds, gt_seg):
     return ret
 
 
-def run_eval(target, data, model, ae, pthresh = 0, limit = 40):
+def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh = 0, limit = 40):
     dwhere = np.where(data.csv.has_masks & (data.labels[:,data.pathologies.index(target)]  == 1))[0]
     results = []
-    for method in [
+    
+    if to_eval == None:
+        to_eval = [
                    "latentshift-max", 
 #                    "latentshift-mean", 
 #                    "latentshift-mm", 
 #                    "latentshift-int",
                    "grad", "integrated", "guided"
-                    ]:
+                    ]
+    
+    for method in to_eval:
         count = 0
         for idx in dwhere:
             #print(method, idx)
@@ -216,6 +220,10 @@ def run_eval(target, data, model, ae, pthresh = 0, limit = 40):
                 dimage = compute_attribution(image, method, model, target, ae=ae)
                 #print(method, dimage.shape)
                 metrics = calc_iou(dimage, sample["pathology_masks"][data.pathologies.index(target)][0])
+                if compute_recon:
+                    recon = ae(image)["out"]
+                    metrics["mse"] = float(((image-recon)**2).mean().detach().cpu().numpy())
+                    metrics["mae"] = float(torch.abs(image-recon).mean().detach().cpu().numpy())
                 metrics["idx"] = idx
                 metrics["target"] = target
                 metrics["method"] = method
@@ -280,7 +288,34 @@ def generate_video(image, model, target, ae, temp_path, target_filename=None, bo
     
     
     
+def generate_attributions(sample, model, target, ae, temp_path, dmerge):
+
+    image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
     
+    p = model(image)[:,model.pathologies.index(target)].detach().cpu()
+    print(p)
+    methods = ["image", "grad", "guided", "integrated", "latentshift-max"]
+    fig, ax = plt.subplots(1,len(methods), figsize=(8,3), dpi=350)
+    for i, method in enumerate(methods):
+
+        if method == "image":
+            ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
+            ax[i].set_ylabel(target + "\n" + str(model), fontsize=7)
+        else:
+            dimage = compute_attribution(image, method, model, target, ae=ae, threshold=True)
+            ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
+            dimage[dimage==0] = np.nan
+            ax[i].imshow(dimage, interpolation='none', alpha=0.8, cmap="Reds");
+        try:
+            ax[i].imshow(sample["pathology_masks"][dmerge.pathologies.index(target)][0], interpolation='none', alpha=0.1);
+        except:
+            pass
+        ax[i].get_xaxis().set_visible(False)
+        ax[i].set_yticks([])
+        #ax[i].get_yaxis().set_visible(False)
+        ax[i].set_title(method, fontsize=8)
+    fig.subplots_adjust(wspace=0, hspace=0);
+    plt.show()
     
     
     
