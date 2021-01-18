@@ -11,11 +11,11 @@ import json
 
 for_eval = [
             "Cardiomegaly",
+            "Mass",
             "Atelectasis",
             "Effusion",
             "Consolidation",
-            "Edema",
-            "Mass"
+            "Edema"
             ]
 
 page = ""

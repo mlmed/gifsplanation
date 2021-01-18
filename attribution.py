@@ -132,16 +132,18 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
         
         if "-max" in method:
             dimage = np.max(np.abs(xp.cpu().numpy()[0][0] - dimgs[0][0]),0)
-        if "-mean" in method:
+        elif "-mean" in method:
             dimage = np.mean(np.abs(xp.cpu().numpy()[0][0] - dimgs[0][0]),0)
-        if "-mm" in method:
+        elif "-mm" in method:
             dimage = np.abs(dimgs[0][0][0] - dimgs[0][0][-1])
-        if "-int" in method:
+        elif "-int" in method:
             dimages = []
             for i in range(len(dimgs)):
                 dimages.append(np.abs(dimgs[0][0][0] - dimgs[0][0][1]))
             dimage = np.mean(dimages,0)
-            
+        else:
+            raise Exception("Unknown mode")
+        
         dimage = clean(dimage)
         return dimage
     
