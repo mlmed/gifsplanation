@@ -11,14 +11,21 @@ import json
 
 for_eval = [
             "Cardiomegaly",
-            "Mass",
             "Atelectasis",
             "Effusion",
-            "Consolidation",
-            "Edema"
+            "Lung Opacity",
+            "Mass",
+            "Pneumothorax"
             ]
 
 page = ""
+page += """
+<div style="width:100%;height:50px">
+<img style="float:right;height:50px" src="assets/aimi-logo.png" />
+<img style="float:right;height:50px" src="assets/stanford-logo2.png" />
+</div>
+"""
+
 for target in for_eval:
     page += "<h2>{}</h2>".format(target)
     for label in [1, 0]:
@@ -31,7 +38,7 @@ for target in for_eval:
             metadata = json.load(open(j))
             print(metadata["id"])
             #title = "{} - {} - {}".format(metadata["source"]["Sex"], metadata["source"]["Age"], metadata["id"])
-            title = "{} - {}".format(metadata["dataset"], metadata["id"])
+            title = "{}".format(metadata["id"])
             link = "<li><a href='{}' target='viewer'>{}</a></li>".format("viewer.htm?img="+metadata["id"], title)
             page += link
         page += "</ol>"

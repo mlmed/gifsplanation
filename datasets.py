@@ -57,6 +57,12 @@ def get_data(dataset_str, transforms=True, size=224):
             transform=transform, unique_patients=False, pathology_masks=True)
         datasets.append(dataset)
         
+    if "nilarge" in dataset_str:
+        dataset = xrv.datasets.NIH_Dataset(
+            imgpath=dataset_dir + "/NIH/ChestXray-NIHCC/images", 
+            transform=transform, unique_patients=False, pathology_masks=True)
+        datasets.append(dataset)
+        
     if "siim" in dataset_str: 
         dataset = xrv.datasets.SIIM_Pneumothorax_Dataset(
             imgpath=dataset_dir + "SIIM_TRAIN_TEST/dicom-images-train/",
