@@ -147,7 +147,6 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
         dimage = clean(dimage)
         return dimage
     
-    
     if method == "grad":
         image.requires_grad = True
         pred = clf(image)[:,clf.pathologies.index(target)]
@@ -234,9 +233,9 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
     return pd.DataFrame(results)
 
 
-def generate_video(image, model, target, ae, temp_path, target_filename=None, border=True, note="", show=False):
+def generate_video(image, model, target, ae, temp_path, method="latentshift", target_filename=None, border=True, note="", show=False):
     
-    params = compute_attribution(image.cuda(), "latentshift", model, target, ret_params=True, ae=ae)
+    params = compute_attribution(image.cuda(), method, model, target, ret_params=True, ae=ae)
     dimgs = params["dimgs"]
     
     #ffmpeg -i gif-tmp/image-%d-a.png -vcodec libx264 aout.mp4
@@ -266,7 +265,9 @@ def generate_video(image, model, target, ae, temp_path, target_filename=None, bo
         for k in range(3):
             i = idx + len(towrite)*k
             fig.savefig(temp_path +'/image-' + str(i) + '-a.png', bbox_inches='tight', pad_inches=0, transparent=False)
-      
+            
+        plt.close()
+        
     if not target_filename:
         target_filename = "videos/single-{}_{}_{}_{}".format(
             target,
