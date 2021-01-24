@@ -12,11 +12,11 @@ import sklearn, sklearn.model_selection
 
 for_eval = [
             "Cardiomegaly",
-            "Atelectasis",
+            #"Atelectasis",
             "Effusion",
             "Lung Opacity",
             "Mass",
-            "Pneumothorax"
+            #"Pneumothorax"
             ]
 
 number = 0
@@ -27,16 +27,15 @@ page += """
 <img style="float:right;height:50px" src="assets/stanford-logo2.png" />
 
 <p style="max-width:700px;padding:5px">
-This trial is to determine which prediction explaination method performs best 
-on the task of verifying and understanding a neural network's predictions from
-chest X-rays. You will be presented with
+The goal of a prediction explanation method is to identify features which are relevant to the prediction of a neural network and convey that information to the user.<br>
+This trial is to determine if a new prediction explanation method performs better when explaining predictions on chest X-rays.<br>
+Each link below corresponds to a single chest X-ray which has had a positive prediction made by a neural network. Method A corresponds to 3 traditional methods while method B corresponds to a new proposed method. More detailed explanations of the methods are available by clicking the "(What is this?)" link above an image.
 </p>
 </div>
 """
 record = []
 for target in for_eval:
     page += "<h2>{}</h2>".format(target)
-    page += "<ul>"
     
     toprocess = sorted(glob.glob("images/*{}-*.json".format(target)))
     tp = [k.endswith("-1.json") for k in toprocess]
@@ -50,7 +49,7 @@ for target in for_eval:
     for trial, group in enumerate([groupa, groupb]):
         
         page += "<h3 style='margin-left: 5px;'>{}</h3>".format(condition[trial])
-        
+        page += "<ul>"
         for j in group:
             number+=1
             print(j)
@@ -64,7 +63,7 @@ for target in for_eval:
             imgb = base64.standard_b64encode(metadata["id"].encode('ascii')).decode("utf-8") 
             link = "<li><a href='viewer.htm?imgb={}&trial={}&id={}' target='viewer'>{}</a></li>".format(imgb, trial, number, title)
             page += link
-    page += "</ul>"
+        page += "</ul>"
 with open("trial.htm", 'w') as f:
     f.write(page)
     

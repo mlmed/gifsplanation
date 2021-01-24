@@ -11,6 +11,7 @@ import pickle
 import pandas as pd
 import shutil
 import os,sys
+import torchxrayvision as xrv
 
 
 def compute_attribution(image, method, clf, target, plot=False, ret_params=False, fixrange=None, p=0.0, ae=None, sigma=0, threshold=False):
@@ -213,7 +214,7 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
                 #print("no mask found")
                 continue
             image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
-            p = model(image)[:,model.pathologies.index(target)].detach().cpu()
+            p = model(image)[:,model.pathologies.index(target)].detach().cpu().numpy()
             #print(p)
             if p > pthresh:
                 dimage = compute_attribution(image, method, model, target, ae=ae)
@@ -224,6 +225,7 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
                     metrics["mse"] = float(((image-recon)**2).mean().detach().cpu().numpy())
                     metrics["mae"] = float(torch.abs(image-recon).mean().detach().cpu().numpy())
                 metrics["idx"] = idx
+                metrics["p"] = float(p)
                 metrics["target"] = target
                 metrics["method"] = method
                 results.append(metrics)
@@ -319,8 +321,29 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge):
     plt.show()
     
     
+def test_epoch(model, dataset, target, limit=128):
+
+    labels = dataset.labels[:,dataset.pathologies.index(target)]
+    num_to_sample = limit//len(np.unique(labels))
+    np.random.seed(0)
+    mask = np.hstack([np.random.choice(np.where(labels == l)[0], num_to_sample, replace=False) for l in np.unique(labels)])
+
+    tlabels = labels[mask]
     
+    dsub = xrv.datasets.SubsetDataset(dataset, mask)
+    
+    dl = torch.utils.data.DataLoader(dsub, batch_size=128, num_workers=0, pin_memory=False)
 
-
-
-
+    d_preds = []
+    with torch.no_grad():
+        for i, batch in enumerate(dl):
+            imgs = batch["img"].cuda()
+            pred = model(imgs)
+            d_preds.append(pred.detach().cpu().numpy())
+            if i %10 == 0:
+                print(i)
+    d_preds = np.concatenate(d_preds)
+    tpred = d_preds[:,model.pathologies.index(target)]
+    
+    task_auc = sklearn.metrics.roc_auc_score(tlabels, tpred)
+    return task_auc
