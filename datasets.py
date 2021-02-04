@@ -21,7 +21,7 @@ import pandas as pd
 
 def get_data(dataset_str, transforms=True, size=224):
     
-    dataset_dir = "/home/groups/akshaysc/joecohen/"
+    dataset_dir = "/carl/rupert_brooks/data"
     
     if transforms:
         transform = torchvision.transforms.Compose([xrv.datasets.XRayCenterCrop(),
@@ -53,7 +53,7 @@ def get_data(dataset_str, transforms=True, size=224):
         
     if "nih" in dataset_str:
         dataset = xrv.datasets.NIH_Dataset(
-            imgpath=dataset_dir + "/NIH/images-224", 
+            imgpath=dataset_dir + "/nihsmall/images-224", 
             transform=transform, unique_patients=False, pathology_masks=True)
         datasets.append(dataset)
         
