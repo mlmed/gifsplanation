@@ -8,6 +8,7 @@ import sklearn, sklearn.metrics
 import captum, captum.attr
 import torch, torch.nn
 import pickle
+from PIL import ImageDraw
 import pandas as pd
 import shutil
 import os,sys
@@ -25,8 +26,8 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
                         mode='constant', 
                         sigma=(sigma, sigma), 
                         truncate=3.5)
-        if threshold:
-            saliency = thresholdf(saliency, 95)
+        if threshold != False:
+            saliency = thresholdf(saliency, 95 if threshold == True else threshold)
         return saliency
     
     if "latentshift" in method:
@@ -190,7 +191,7 @@ def calc_iou(preds, gt_seg):
     return ret
 
 
-def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh = 0, limit = 40):
+def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh = 0, limit = 40,data_aug=None):
     dwhere = np.where(data.csv.has_masks & (data.labels[:,data.pathologies.index(target)]  == 1))[0]
     results = []
     
@@ -208,6 +209,11 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
         for idx in dwhere:
             #print(method, idx)
             imgresults = []
+            
+            if data_aug:
+                # add for noise
+                data.data_aug = data_aug
+                
             sample = data[idx]
 
             if data.pathologies.index(target) not in sample["pathology_masks"]:
@@ -219,6 +225,12 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
             if p > pthresh:
                 dimage = compute_attribution(image, method, model, target, ae=ae)
                 #print(method, dimage.shape)
+                
+                if data_aug:
+                    #get version of masks that are clean
+                    data.data_aug = None
+                    sample = data[idx]  
+                
                 metrics = calc_iou(dimage, sample["pathology_masks"][data.pathologies.index(target)][0])
                 if compute_recon:
                     recon = ae(image)["out"]
@@ -235,7 +247,7 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
     return pd.DataFrame(results)
 
 
-def generate_video(image, model, target, ae, temp_path, method="latentshift", target_filename=None, border=True, note="", show=False):
+def generate_video(image, model, target, ae, temp_path, method="latentshift", target_filename=None, border=True, note="", show=False, watermark=True):
     
     params = compute_attribution(image.cuda(), method, model, target, ret_params=True, ae=ae)
     dimgs = params["dimgs"]
@@ -255,12 +267,28 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
         gcf = plt.gcf()
         gcf.set_size_inches(10, 6)
         fig.set_canvas(gcf.canvas)
+
         if border:
             plt.imshow(np.concatenate([img,dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
             plt.title("Pred of {}: {:.2f}".format(target, p),fontsize=25)
         else:
             plt.imshow(dimg[0][0], interpolation='none', cmap='Greys_r')
         plt.axis('off')
+        
+        if watermark:
+            #plt.text(fig_width*40, fig_height*40,"gifsplanation",fontsize=12, color="w")
+#             plt.text(  # position text relative to Figure
+#                 0.0, 1.0, 'figure corner',
+#                 ha='right', va='bottom',
+#                 transform=fig.transFigure
+#             )
+            plt.text(  # position text relative to Axes
+                0.96, 0.1, 'gifsplanation',
+                ha='right', va='bottom',
+                transform=plt.gca().transAxes
+            )
+    
+           
         
         if not os.path.exists(temp_path): 
             os.mkdir(temp_path)
@@ -321,7 +349,7 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge):
     plt.show()
     
     
-def test_epoch(model, dataset, target, limit=128):
+def test_epoch(model, dataset, target, limit=128, batch_size=128):
 
     labels = dataset.labels[:,dataset.pathologies.index(target)]
     num_to_sample = limit//len(np.unique(labels))
@@ -332,7 +360,7 @@ def test_epoch(model, dataset, target, limit=128):
     
     dsub = xrv.datasets.SubsetDataset(dataset, mask)
     
-    dl = torch.utils.data.DataLoader(dsub, batch_size=128, num_workers=0, pin_memory=False)
+    dl = torch.utils.data.DataLoader(dsub, batch_size=batch_size, num_workers=0, pin_memory=False)
 
     d_preds = []
     with torch.no_grad():

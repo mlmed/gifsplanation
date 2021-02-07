@@ -12,11 +12,11 @@ import sklearn, sklearn.model_selection
 
 for_eval = [
             "Cardiomegaly",
-            #"Atelectasis",
+            "Atelectasis",
             "Effusion",
             "Lung Opacity",
             "Mass",
-            #"Pneumothorax"
+            "Pneumothorax"
             ]
 
 number = 0
