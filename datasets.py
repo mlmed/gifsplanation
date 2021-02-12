@@ -91,8 +91,19 @@ def get_data(dataset_str, transforms=True, size=224):
             transform=transform, unique_patients=False)
         datasets.append(dataset)
         
+    if "openi" in dataset_str:
+        dataset = xrv.datasets.Openi_Dataset(
+            imgpath=dataset_dir + "/OpenI/images/",
+            transform=transform)
+        datasets.append(dataset)
         
-
+    if "vin" in dataset_str:
+        dataset = xrv.datasets.VinBrain_Dataset(
+            imgpath=dataset_dir + "vinbigdata-chest-xray-abnormalities-detection/train",
+            csvpath=dataset_dir + "vinbigdata-chest-xray-abnormalities-detection/train.csv",
+            pathology_masks=True, 
+            transform=transform)
+        datasets.append(dataset)
 
 
     newlabels = set()
