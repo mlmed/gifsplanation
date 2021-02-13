@@ -1,0 +1,316 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<title>Gifsplanation</title>
+<meta charset="utf-8">
+
+<style>
+.main table {
+width:100% !important
+}
+.main td {
+text-align: center;
+width:5% !important;
+padding-top: 7px;
+padding-bottom: 6px;
+
+}
+.main img {
+width:100% !important
+}
+.main video {
+width:100% !important
+}
+img {
+image-rendering: pixelated;
+}
+
+.header td:nth-child(1) {  
+  background-color: #9DBBE3;
+}
+.header td:nth-child(2) {  
+  background-color: #BFE3DF;
+}
+.header td:nth-child(3) {  
+  background-color: #FFD9BD;
+}
+.header td:nth-child(4) {  
+  background-color: #EE9D94;
+}
+.header td:nth-child(5) {  
+  background-color: #97E5D7;
+}
+.header td:nth-child(6) {  
+  background-color: #D2EBD8;
+}
+.header td:nth-child(7) {  
+  background-color: #FCF1DD;
+}
+
+
+
+
+
+.targets td:nth-child(1) {  
+  background-color: #9DBBE3;
+}
+
+.targets td:nth-child(2) {  
+  background-color: #BFE3DF;
+}
+.targets td:nth-child(3) {  
+  background-color: #BFE3DF;
+}
+
+.targets td:nth-child(4) {  
+  background-color: #FFD9BD;
+}
+.targets td:nth-child(5) {  
+  background-color: #FFD9BD;
+}
+.targets td:nth-child(6) {  
+  background-color: #EE9D94;
+}
+.targets td:nth-child(7) {  
+  background-color: #EE9D94;
+}
+
+.targets {
+font-size: small;
+}
+
+body {
+min-width:1000px
+}
+</style>
+
+<script>
+
+function speed(s){
+	
+  var videos = document.querySelectorAll('video');
+  
+	for(video of videos) {
+		video.playbackRate = s;
+	}
+	
+	
+}
+</script>
+
+<div style="width: 100%; min-height: 50px">
+	<img style="float: right; height: 50px" src="assets/aimi-logo.png" />
+	<img style="float: right; height: 50px" src="assets/stanford-logo2.png" />
+
+	<p style="max-width: 700px; padding: 5px">
+	<b>Project title:</b> Gifsplanation via Latent Shift: A Simple Autoencoder Approach to Progressive Exaggeration on Chest X-rays<br><br> 
+	<b>Background:</b> The goal of a prediction explanation method is to
+		identify features which are relevant to the prediction of a neural
+		network and convey that information to the user.
+		<br><br>
+		The method shown
+		below is called Latent Shift. This method looks at what pixels change
+		when the image is simulated to have more or less of the specific
+		pathology. Each frame of this video is simulated. The video starts
+		with the pathology removed and proceeds to add the pathology before
+		reversing and starting the loop over again.
+		<br><br>
+		This demonstration
+		displays the method on 3 different classifiers trained on different
+		datasets. Variation in the concept learned is visible when the
+		explanations are viewed. The same autoencoder is used between the 3
+		visualizations so the only variable is the classifier. The examples are cherrypicked.
+
+
+	</p>
+</div>
+
+
+Video speed:
+<input type="button" value="Normal" onclick="javascript:speed(1.0)">
+<input type="button" value="Half" onclick="javascript:speed(0.5)">
+<input type="button" value="Tenth" onclick="javascript:speed(0.1)">
+
+<div class="main">
+
+<table class="header"><tr>
+<td>Input Image</td>
+<td colspan="2"><a href="https://github.com/mlmed/torchxrayvision">
+TorchXRayVision DenseNet121-all</a><br>
+<small>Trained on PadChest, NIH, CheXpert, and MIMIC-CXR datasets</small>
+</td>
+<td colspan="2"><a href="https://github.com/mlmed/torchxrayvision">
+TorchXRayVision DenseNet121-mimic_ch</a><br>
+<small>Trained on the MIMIC-CXR dataset</small>
+</td>
+
+<td colspan="2"><a href="https://arxiv.org/abs/2005.14480">
+JF Healthcare DenseNet121</a><br>
+<small>Trained on CheXpert data for the CheXpert challenge</small>
+</td>
+</tr>
+<tr class="targets">
+<td></td>
+<td>Latent Shift 2D</td>
+<td>Latent Shift Gif</td>
+<td>Latent Shift 2D</td>
+<td>Latent Shift Gif</td>
+<td>Latent Shift 2D</td>
+<td>Latent Shift Gif</td>
+</tr>
+
+</table>
+
+<div class="targets">
+
+
+
+<h2>Prediction of Cardiomegaly</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1.png'/></td>
+<td><img src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1-jfhealthcare-DenseNet121-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-10201199918783419519779794936126082408474409-Cardiomegaly-1-jfhealthcare-DenseNet121-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+</tr></table>
+<h2>Prediction of Effusion</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1.png'/></td>
+<td><img src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1-jfhealthcare-DenseNet121-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-36121320013082349055928370704331338105989249-Effusion-1-jfhealthcare-DenseNet121-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+</tr></table>
+<h2>Prediction of Atelectasis</h2>
+<table><tr>
+<td><img src='images3/NIH_Dataset-1282439606-Atelectasis-1.png'/></td>
+<td><img src='images3/NIH_Dataset-1282439606-Atelectasis-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-1282439606-Atelectasis-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/NIH_Dataset-1282439606-Atelectasis-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-1282439606-Atelectasis-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/NIH_Dataset-1282439606-Atelectasis-1-jfhealthcare-DenseNet121-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-1282439606-Atelectasis-1-jfhealthcare-DenseNet121-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+</tr></table>
+<h2>Prediction of Consolidation</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1.png'/></td>
+<td><img src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1-jfhealthcare-DenseNet121-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-68669128681721738321741397205247540104929567-Consolidation-1-jfhealthcare-DenseNet121-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+</tr></table>
+<h2>Prediction of Mass</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-8865137103320410885238934809914742203430307-Mass-1.png'/></td>
+<td><img src='images3/PC_Dataset-8865137103320410885238934809914742203430307-Mass-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-8865137103320410885238934809914742203430307-Mass-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Pneumothorax</h2>
+<table><tr>
+<td><img src='images3/NIH_Dataset-14573616568-Pneumothorax-1.png'/></td>
+<td><img src='images3/NIH_Dataset-14573616568-Pneumothorax-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-14573616568-Pneumothorax-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/NIH_Dataset-14573616568-Pneumothorax-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-14573616568-Pneumothorax-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Infiltration</h2>
+<table><tr>
+<td><img src='images3/NIH_Dataset-15591720779-Infiltration-1.png'/></td>
+<td><img src='images3/NIH_Dataset-15591720779-Infiltration-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-15591720779-Infiltration-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Edema</h2>
+<table><tr>
+<td><img src='images3/NIH_Dataset-13053510535-Edema-1.png'/></td>
+<td><img src='images3/NIH_Dataset-13053510535-Edema-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-13053510535-Edema-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/NIH_Dataset-13053510535-Edema-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-13053510535-Edema-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/NIH_Dataset-13053510535-Edema-1-jfhealthcare-DenseNet121-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-13053510535-Edema-1-jfhealthcare-DenseNet121-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+</tr></table>
+<h2>Prediction of Emphysema</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-39046269760008870352218360670210871191164426-Emphysema-1.png'/></td>
+<td><img src='images3/PC_Dataset-39046269760008870352218360670210871191164426-Emphysema-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-39046269760008870352218360670210871191164426-Emphysema-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Fibrosis</h2>
+<table><tr>
+<td><img src='images3/NIH_Dataset-15124718782-Fibrosis-1.png'/></td>
+<td><img src='images3/NIH_Dataset-15124718782-Fibrosis-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-15124718782-Fibrosis-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Pneumonia</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-17137233352743681381431576686868481347706419-Pneumonia-1.png'/></td>
+<td><img src='images3/PC_Dataset-17137233352743681381431576686868481347706419-Pneumonia-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-17137233352743681381431576686868481347706419-Pneumonia-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/PC_Dataset-17137233352743681381431576686868481347706419-Pneumonia-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-17137233352743681381431576686868481347706419-Pneumonia-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Pleural_Thickening</h2>
+<table><tr>
+<td><img src='images3/PC_Dataset-20735249085710567463382428147548903786397603-Pleural_Thickening-1.png'/></td>
+<td><img src='images3/PC_Dataset-20735249085710567463382428147548903786397603-Pleural_Thickening-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/PC_Dataset-20735249085710567463382428147548903786397603-Pleural_Thickening-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Hernia</h2>
+<table><tr>
+<td><img src='images3/NIH_Dataset-1269898994-Hernia-1.png'/></td>
+<td><img src='images3/NIH_Dataset-1269898994-Hernia-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/NIH_Dataset-1269898994-Hernia-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+<h2>Prediction of Lung Opacity</h2>
+<table><tr>
+<td><img src='images3/RSNA_Pneumonia_Dataset-102564c7024796-39ed-4eda-906d-65a1fb5d5c52-Lung Opacity-1.png'/></td>
+<td><img src='images3/RSNA_Pneumonia_Dataset-102564c7024796-39ed-4eda-906d-65a1fb5d5c52-Lung Opacity-1-XRV-DenseNet121-all-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/RSNA_Pneumonia_Dataset-102564c7024796-39ed-4eda-906d-65a1fb5d5c52-Lung Opacity-1-XRV-DenseNet121-all-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td><img src='images3/RSNA_Pneumonia_Dataset-102564c7024796-39ed-4eda-906d-65a1fb5d5c52-Lung Opacity-1-XRV-DenseNet121-mimic_ch-latentshift-max.png'/></td>
+<td><video autoplay loop muted><source id='latentshift' src='images3/RSNA_Pneumonia_Dataset-102564c7024796-39ed-4eda-906d-65a1fb5d5c52-Lung Opacity-1-XRV-DenseNet121-mimic_ch-latentshift.mp4' type='video/mp4'>Your browser does not support the video tag.</video></td>
+<td>-</td>
+<td>-</td>
+</tr></table>
+
+
+
+
+
+</div>
+</div>
+
