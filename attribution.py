@@ -15,12 +15,13 @@ import os,sys
 import torchxrayvision as xrv
 
 
-def compute_attribution(image, method, clf, target, plot=False, ret_params=False, fixrange=None, p=0.0, ae=None, sigma=0, threshold=False):
+def compute_attribution(image, method, clf, target, plot=False, ret_params=False, fixrange=None, p=0.0, ae=None, sigma=0, take_abs=True, threshold=False):
     
     image = image.clone().detach()
     
     def clean(saliency):
-        saliency = np.abs(saliency)
+        if take_abs:
+            saliency = np.abs(saliency)
         if sigma > 0:
             saliency = skimage.filters.gaussian(saliency, 
                         mode='constant', 
@@ -317,15 +318,21 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
         return target_filename + ".mp4"
 
     
+def compute_attributions(image, model, target, ae, methods):
+    saliency_maps = dict()
+    p = model(image)[:,model.pathologies.index(target)].detach().cpu()
+    print(p)
+    for i, method in enumerate(methods):
+        saliency_maps[method] = compute_attribution(image, method, model, target, ae=ae, threshold=True)
+    return saliency_maps    
     
     
 def generate_attributions(sample, model, target, ae, temp_path, dmerge):
 
     image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
     
-    p = model(image)[:,model.pathologies.index(target)].detach().cpu()
-    print(p)
     methods = ["image", "grad", "guided", "integrated", "latentshift-max"]
+    saliency_maps = compute_attributions(image, model, target, ae, methods[1:])
     fig, ax = plt.subplots(1,len(methods), figsize=(8,3), dpi=350)
     for i, method in enumerate(methods):
 
@@ -333,7 +340,7 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge):
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
             ax[i].set_ylabel(target + "\n" + str(model), fontsize=7)
         else:
-            dimage = compute_attribution(image, method, model, target, ae=ae, threshold=True)
+            dimage = saliency_maps[method].copy()
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
             dimage[dimage==0] = np.nan
             ax[i].imshow(dimage, interpolation='none', alpha=0.8, cmap="Reds");
@@ -347,7 +354,9 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge):
         ax[i].set_title(method, fontsize=8)
     fig.subplots_adjust(wspace=0, hspace=0);
     plt.show()
+    return saliency_maps
     
+   
     
 def test_epoch(model, dataset, target, limit=128, batch_size=128):
 
