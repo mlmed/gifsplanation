@@ -13,6 +13,34 @@ import pandas as pd
 import shutil
 import os,sys
 import torchxrayvision as xrv
+from scipy.ndimage import measurements as s_ndi_m
+
+
+def centroid_and_size(component):
+    centroid=np.mean(component, axis=1)
+    sz=len(component[0])
+    return centroid,sz
+
+
+class CentroidDistanceCalculator:
+    def __init__(self,mask):
+        self.mask_components, self.mask_ncomponents = s_ndi_m.label(mask>0)
+        self.mask_centroids=[centroid_and_size(np.where(self.mask_components==i))[0] 
+                             for i in range(1,1+self.mask_ncomponents)]
+    def compute_weighted_average_distance(self,thresholded_mask):
+        smap_c, n_c=s_ndi_m.label(thresholded_mask)
+        centroids_and_sizes=[centroid_and_size(np.where(smap_c==i)) for i in range(1,1+n_c)]
+        total_weight=0
+        weighted_sum=0
+        for ctr,sz in centroids_and_sizes:
+            mindist=np.inf
+            for ctr_mask in self.mask_centroids:
+                d1=np.sqrt(np.sum(np.square(ctr_mask-ctr)))
+                mindist=np.min([mindist,d1])
+            weighted_sum+=mindist*sz
+            total_weight+=sz
+        return weighted_sum/total_weight
+
 
 
 def compute_attribution(image, method, clf, target, plot=False, ret_params=False, fixrange=None, p=0.0, ae=None, sigma=0, take_abs=True, threshold=False):
@@ -183,12 +211,21 @@ def thresholdf(x, percentile):
 def calc_iou(preds, gt_seg):
     gt_seg = gt_seg.astype(np.bool)
     seg_area_percent = (gt_seg > 0).sum()/(gt_seg != -1).sum() # percent of area
-    preds = (thresholdf(preds, (1-seg_area_percent)*100) > 0).astype(np.bool)
+    preds_balanced = (thresholdf(preds, (1-seg_area_percent)*100) > 0).astype(np.bool)
+    preds_95 = (thresholdf(preds, 95) > 0).astype(np.bool)
+    cdc = CentroidDistanceCalculator(gt_seg)
     #EPS = 10e-16
     ret = {}
-    ret["iou"] = (gt_seg & preds).sum() / ((gt_seg | preds).sum())
-    ret["precision"] = sklearn.metrics.precision_score(gt_seg.flatten(),preds.flatten())
-    ret["recall"] = sklearn.metrics.recall_score(gt_seg.flatten(),preds.flatten())  
+    ret["distance_balanced"] = cdc.compute_weighted_average_distance( preds_balanced )
+    ret["distance_95"] = cdc.compute_weighted_average_distance( preds_95 )
+    ret["inside_95"] = (gt_seg & preds_95).sum() / gt_seg.sum()
+    ret["iou_95"] = (gt_seg & preds_95).sum() / ((gt_seg | preds_95).sum())
+    ret["inside_balanced"] = (gt_seg & preds_balanced).sum() / gt_seg.sum()
+    ret["iou_balanced"] = (gt_seg & preds_balanced).sum() / ((gt_seg | preds_balanced).sum())
+    ret["precision_95"] = sklearn.metrics.precision_score(gt_seg.flatten(),preds_95.flatten())
+    ret["recall_95"] = sklearn.metrics.recall_score(gt_seg.flatten(),preds_95.flatten())  
+    ret["precision_balanced"] = sklearn.metrics.precision_score(gt_seg.flatten(),preds_balanced.flatten())
+    ret["recall_balanced"] = sklearn.metrics.recall_score(gt_seg.flatten(),preds_balanced.flatten())  
     return ret
 
 
@@ -318,12 +355,12 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
         return target_filename + ".mp4"
 
     
-def compute_attributions(image, model, target, ae, methods):
+def compute_attributions(image, model, target, ae, methods, threshold=True):
     saliency_maps = dict()
     p = model(image)[:,model.pathologies.index(target)].detach().cpu()
     print(p)
     for i, method in enumerate(methods):
-        saliency_maps[method] = compute_attribution(image, method, model, target, ae=ae, threshold=True)
+        saliency_maps[method] = compute_attribution(image, method, model, target, ae=ae, threshold=threshold)
     return saliency_maps    
     
     
@@ -332,7 +369,7 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge):
     image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
     
     methods = ["image", "grad", "guided", "integrated", "latentshift-max"]
-    saliency_maps = compute_attributions(image, model, target, ae, methods[1:])
+    saliency_maps = compute_attributions(image, model, target, ae, methods[1:], threshold=False)
     fig, ax = plt.subplots(1,len(methods), figsize=(8,3), dpi=350)
     for i, method in enumerate(methods):
 
@@ -340,7 +377,15 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge):
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
             ax[i].set_ylabel(target + "\n" + str(model), fontsize=7)
         else:
+            try:
+                gt_seg=sample["pathology_masks"][dmerge.pathologies.index(target)][0]
+                seg_area_percent = (gt_seg > 0).sum()/(gt_seg != -1).sum() # percent of area
+            except:
+                seg_area_percent=5
             dimage = saliency_maps[method].copy()
+            print("Thresholding at",seg_area_percent)
+            dimage = thresholdf(dimage, (1-seg_area_percent)*100)
+
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
             dimage[dimage==0] = np.nan
             ax[i].imshow(dimage, interpolation='none', alpha=0.8, cmap="Reds");
