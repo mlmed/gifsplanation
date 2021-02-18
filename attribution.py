@@ -319,7 +319,7 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
     
     
     
-def generate_attributions(sample, model, target, ae, temp_path, dmerge, plot_iou=False, methods = ["image", "grad", "guided", "integrated", "latentshift-max"]):
+def generate_attributions(sample, model, target, ae, temp_path, dmerge, plot_iou=False, methods = ["image", "grad", "guided", "integrated", "latentshift-max"], threshold=True):
 
     image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
     
@@ -334,9 +334,7 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge, plot_iou
             ax[i].set_ylabel(target + "\n" + str(model).replace("-DenseNet121",""), fontsize=7)
         else:
             
-            threshold = True
-            
-            if plot_iou:
+            if plot_iou and (threshold == True):
                 gt_seg = sample["pathology_masks"][dmerge.pathologies.index(target)][0]
                 seg_area_percent = (gt_seg > 0).sum()/(gt_seg != -1).sum() # percent of area
                 threshold = (1-seg_area_percent)*100
