@@ -137,11 +137,11 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
         elif "-mean" in method:
             dimage = np.mean(np.abs(xp.cpu().numpy()[0][0] - dimgs[0][0]),0)
         elif "-mm" in method:
-            dimage = np.abs(dimgs[0][0][0] - dimgs[0][0][-1])
+            dimage = np.abs(dimgs[0][0][0] - dimgs[-1][0][0])
         elif "-int" in method:
             dimages = []
-            for i in range(len(dimgs)):
-                dimages.append(np.abs(dimgs[0][0][0] - dimgs[0][0][1]))
+            for i in range(len(dimgs)-1):
+                dimages.append(np.abs(dimgs[i][0][0] - dimgs[i+1][0][0]))
             dimage = np.mean(dimages,0)
         else:
             raise Exception("Unknown mode")
@@ -319,24 +319,46 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
     
     
     
-def generate_attributions(sample, model, target, ae, temp_path, dmerge):
+def generate_attributions(sample, model, target, ae, temp_path, dmerge, plot_iou=False, methods = ["image", "grad", "guided", "integrated", "latentshift-max"]):
 
     image = torch.from_numpy(sample["img"]).unsqueeze(0).cuda()
     
     p = model(image)[:,model.pathologies.index(target)].detach().cpu()
     print(p)
-    methods = ["image", "grad", "guided", "integrated", "latentshift-max"]
+    
     fig, ax = plt.subplots(1,len(methods), figsize=(8,3), dpi=350)
     for i, method in enumerate(methods):
 
         if method == "image":
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
-            ax[i].set_ylabel(target + "\n" + str(model), fontsize=7)
+            ax[i].set_ylabel(target + "\n" + str(model).replace("-DenseNet121",""), fontsize=7)
         else:
-            dimage = compute_attribution(image, method, model, target, ae=ae, threshold=True)
+            
+            threshold = True
+            
+            if plot_iou:
+                gt_seg = sample["pathology_masks"][dmerge.pathologies.index(target)][0]
+                seg_area_percent = (gt_seg > 0).sum()/(gt_seg != -1).sum() # percent of area
+                threshold = (1-seg_area_percent)*100
+            
+            
+            dimage = compute_attribution(image, method, model, target, ae=ae, threshold=threshold)
+
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
+
+            if plot_iou:
+                iou = calc_iou(dimage, sample["pathology_masks"][dmerge.pathologies.index(target)][0])
+                print(method,iou)
+            
             dimage[dimage==0] = np.nan
             ax[i].imshow(dimage, interpolation='none', alpha=0.8, cmap="Reds");
+            
+            if plot_iou:
+                ax[i].text(0, 0,"IoU:{:.3f}".format(iou["iou"]),
+                     horizontalalignment='left',
+                     verticalalignment='top', c="w", size=7)
+                
+            
         try:
             ax[i].imshow(sample["pathology_masks"][dmerge.pathologies.index(target)][0], interpolation='none', alpha=0.1);
         except:
