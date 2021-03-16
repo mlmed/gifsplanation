@@ -176,6 +176,27 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
         dimage = clean(dimage)
         return dimage
     
+    if method == "iterativedelete":
+        
+        lr = 1
+        grads = []
+        for i in range(20):
+            image.requires_grad = True
+            pred = clf(image)[:,clf.pathologies.index(target)]
+            #print(pred)
+            dimage = torch.autograd.grad(torch.abs(pred), image)[0]
+            dimage = dimage.detach().cpu().numpy()[0][0]
+            grads.append(dimage)
+            
+            dimage = thresholdf(dimage, 98)
+            #print(image.shape, dimage.shape)
+            image = image * torch.Tensor(dimage>0).cuda().unsqueeze(0).unsqueeze(0)
+            image = image.clone().detach()
+            
+        dimage = np.mean(grads,0)
+        dimage = clean(dimage)
+        return dimage
+    
 def thresholdf(x, percentile):
     return x * (x > np.percentile(x, percentile))
 
