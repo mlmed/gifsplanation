@@ -342,7 +342,7 @@ def generate_video(image, model, target, ae, temp_path="/tmp/gifsplanation", met
     print(output)
     
     if show:
-        from IPython.display import Video
+        from IPython.core.display import Video
         return Video(target_filename + ".mp4", embed=True)
     else:
         return target_filename + ".mp4"
