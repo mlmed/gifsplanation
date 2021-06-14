@@ -18,7 +18,7 @@ import torchxrayvision as xrv
 def compute_attribution(image, method, clf, target, plot=False, ret_params=False, fixrange=None, p=0.0, ae=None, sigma=0, threshold=False):
     
     image = image.clone().detach()
-    
+    image_shape = image.shape[-2:]
     def clean(saliency):
         saliency = np.abs(saliency)
         if sigma > 0:
@@ -33,16 +33,16 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
     if "latentshift" in method:
         z = ae.encode(image).detach()
         z.requires_grad = True
-        xp = ae.decode(z)
-        pred = clf((image*p + xp*(1-p)))[:,clf.pathologies.index(target)]
+        xp = ae.decode(z, image_shape)
+        pred = F.sigmoid(clf((image*p + xp*(1-p))))[:,clf.pathologies.index(target)]
         dzdxp = torch.autograd.grad((pred), z)[0]
         
         cache = {}
         def compute_shift(lam):
             #print(lam)
             if lam not in cache:
-                xpp = ae.decode(z+dzdxp*lam).detach()
-                pred1 = clf((image*p + xpp*(1-p)))[:,clf.pathologies.index(target)].detach().cpu().numpy()
+                xpp = ae.decode(z+dzdxp*lam, image_shape).detach()
+                pred1 = F.sigmoid(clf((image*p + xpp*(1-p))))[:,clf.pathologies.index(target)].detach().cpu().numpy()
                 cache[lam] = xpp, pred1
             return cache[lam]
         
@@ -65,7 +65,7 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
                 #print("lbound",lbound, "last_pred",last_pred, "cur_pred",cur_pred)
                 if last_pred < cur_pred:
                     break
-                if initial_pred-0.5 > cur_pred:
+                if initial_pred-0.15 > cur_pred:
                     break
                 if lbound <= -1000:
                     break
@@ -77,30 +77,30 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
 
             #right range
             rbound = 0
-            last_pred = initial_pred
-            while True:
-                xpp, cur_pred = compute_shift(rbound)
-                #print("rbound",rbound, "last_pred",last_pred, "cur_pred",cur_pred)
-                if last_pred > cur_pred:
-                    break
-                if initial_pred+0.05 < cur_pred:
-                    break
-                if rbound >= 1000:
-                    break
-                last_pred = cur_pred
-                if np.abs(rbound) < step:
-                    rbound = rbound + 1
-                else:
-                    rbound = rbound + step
+#             last_pred = initial_pred
+#             while True:
+#                 xpp, cur_pred = compute_shift(rbound)
+#                 #print("rbound",rbound, "last_pred",last_pred, "cur_pred",cur_pred)
+#                 if last_pred > cur_pred:
+#                     break
+#                 if initial_pred+0.05 < cur_pred:
+#                     break
+#                 if rbound >= 1000:
+#                     break
+#                 last_pred = cur_pred
+#                 if np.abs(rbound) < step:
+#                     rbound = rbound + 1
+#                 else:
+#                     rbound = rbound + step
         
         print(initial_pred, lbound,rbound)
         #lambdas = np.arange(lbound,rbound,(rbound+np.abs(lbound))//10)
-        lambdas = np.arange(lbound,rbound+1,np.abs((lbound-rbound)/10))
+        lambdas = np.arange(lbound,rbound,np.abs((lbound-rbound)/10))
         ###########################
         
         y = []
         dimgs = []
-        xp = ae.decode(z)[0][0].unsqueeze(0).unsqueeze(0).detach()
+        xp = ae.decode(z,image_shape)[0][0].unsqueeze(0).unsqueeze(0).detach()
         for lam in lambdas:
             
             xpp, pred = compute_shift(lam)
@@ -117,14 +117,15 @@ def compute_attribution(image, method, clf, target, plot=False, ret_params=False
         
         if plot:
             
+            px = 1/plt.rcParams['figure.dpi']
+            full_frame(image[0][0].shape[0]*px,image[0][0].shape[1]*px)
             plt.imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
             plt.title("image")
             plt.show()
+            px = 1/plt.rcParams['figure.dpi']
+            full_frame(xp[0][0].shape[0]*px,xp[0][0].shape[1]*px)
             plt.imshow(xp.detach().cpu()[0][0], interpolation='none', cmap="gray")
             plt.title("image_recon")
-            plt.show()
-            plt.imshow(((image + xp)/2).detach().cpu()[0][0], interpolation='none', cmap="gray")
-            plt.title("image_recon_mix")
             plt.show()
             
             plt.plot(lambdas,y)
@@ -267,16 +268,27 @@ def run_eval(target, data, model, ae, to_eval=None, compute_recon=False, pthresh
                     break
     return pd.DataFrame(results)
 
+import matplotlib as mpl
+def full_frame(width=None, height=None):
 
-def generate_video(image, model, target, ae, temp_path, method="latentshift", target_filename=None, border=True, note="", show=False, watermark=True):
+    mpl.rcParams['savefig.pad_inches'] = 0
+    figsize = None if width is None else (width, height)
+    fig = plt.figure(figsize=figsize)
+    ax = plt.axes([0,0,1,1], frameon=False)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    plt.autoscale(tight=True)
+
+def generate_video(image, model, target, ae, temp_path="/tmp/gifsplanation", method="latentshift", target_filename=None, border=True, note="", show=False, watermark=True, ffmpeg_path="ffmpeg"):
     
     params = compute_attribution(image.cuda(), method, model, target, ret_params=True, ae=ae)
     dimgs = params["dimgs"]
     
     #ffmpeg -i gif-tmp/image-%d-a.png -vcodec libx264 aout.mp4
-    temp_path = "/lscratch/joecohen/SDS-2342-ASDAA"
+    if os.path.exists(target_filename + ".mp4"):
+        os.remove(target_filename + ".mp4") 
     shutil.rmtree(temp_path, ignore_errors=True) 
-    towrite = list(dimgs) + list(reversed(dimgs))
+    towrite = list(reversed(dimgs)) + list(dimgs) # 
     img = image[0][0].cpu().numpy()
 
     for idx, dimg in enumerate(towrite):
@@ -284,38 +296,32 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
             print(idx)
             
         p = model(torch.from_numpy(dimg).cuda())[0,model.pathologies.index(target)].detach().cpu().numpy()
-        fig = plt.Figure(figsize=(10, 6), dpi=50)
-        gcf = plt.gcf()
-        gcf.set_size_inches(10, 6)
-        fig.set_canvas(gcf.canvas)
 
         if border:
+            px = 1/plt.rcParams['figure.dpi']
+            full_frame(dimg[0][0].shape[0]*px*2,dimg[0][0].shape[1]*px)
             plt.imshow(np.concatenate([img,dimg[0][0]], 1), interpolation='none', cmap='Greys_r')
-            plt.title("Pred of {}: {:.2f}".format(target, p),fontsize=25)
+            #plt.title("Pred of {}: {:.2f}".format(target, p),fontsize=25)
         else:
+            px = 1/plt.rcParams['figure.dpi']
+            full_frame(dimg[0][0].shape[0]*px,dimg[0][0].shape[1]*px)
+            
+            
             plt.imshow(dimg[0][0], interpolation='none', cmap='Greys_r')
         plt.axis('off')
         
         if watermark:
-            #plt.text(fig_width*40, fig_height*40,"gifsplanation",fontsize=12, color="w")
-#             plt.text(  # position text relative to Figure
-#                 0.0, 1.0, 'figure corner',
-#                 ha='right', va='bottom',
-#                 transform=fig.transFigure
-#             )
             plt.text(  # position text relative to Axes
                 0.96, 0.1, 'gifsplanation',
                 ha='right', va='bottom',
                 transform=plt.gca().transAxes
             )
-    
-           
         
         if not os.path.exists(temp_path): 
             os.mkdir(temp_path)
-        for k in range(3):
+        for k in range(6):
             i = idx + len(towrite)*k
-            fig.savefig(temp_path +'/image-' + str(i) + '-a.png', bbox_inches='tight', pad_inches=0, transparent=False)
+            plt.savefig(temp_path +'/image-' + str(i) + '-a.png', bbox_inches='tight', pad_inches=0, transparent=False)
             
         plt.close()
         
@@ -326,10 +332,14 @@ def generate_video(image, model, target, ae, temp_path, method="latentshift", ta
             str(model),
             note)
 
-    cmd = "module load ffmpeg;ffmpeg -loglevel quiet -stats -y -i {}/image-%d-a.png -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p '{}.mp4'".format(temp_path,target_filename)
+    
+    cmd = "{} -loglevel quiet -stats -y -i {}/image-%d-a.png -c:v libx264 -vf scale=-2:{} -profile:v baseline -level 3.0 -pix_fmt yuv420p '{}.mp4'".format(ffmpeg_path, temp_path,dimg[0][0].shape[0],target_filename)
     
     print(cmd)
-    os.system(cmd)
+    #os.system(cmd)
+    import subprocess
+    output = subprocess.check_output(cmd, shell=True)
+    print(output)
     
     if show:
         from IPython.display import Video
@@ -352,7 +362,7 @@ def generate_attributions(sample, model, target, ae, temp_path, dmerge, plot_iou
 
         if method == "image":
             ax[i].imshow(image.detach().cpu()[0][0], interpolation='none', cmap="gray")
-            ax[i].set_ylabel(target + "\n" + str(model).replace("-DenseNet121",""), fontsize=7)
+            #ax[i].set_ylabel(target + "\n" + str(model).replace("-DenseNet121",""), fontsize=7)
         else:
             
             if plot_iou and (threshold == True):
