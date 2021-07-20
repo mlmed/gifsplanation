@@ -279,9 +279,9 @@ def full_frame(width=None, height=None):
     ax.get_yaxis().set_visible(False)
     plt.autoscale(tight=True)
 
-def generate_video(image, model, target, ae, temp_path="/tmp/gifsplanation", method="latentshift", target_filename=None, border=True, note="", show=False, watermark=True, ffmpeg_path="ffmpeg"):
+def generate_video(image, model, target, ae, temp_path="/tmp/gifsplanation", method="latentshift", target_filename=None, border=True, note="", show=False, watermark=True, ffmpeg_path="ffmpeg", fixrange=None):
     
-    params = compute_attribution(image.cuda(), method, model, target, ret_params=True, ae=ae)
+    params = compute_attribution(image.cuda(), method, model, target, ret_params=True, ae=ae, fixrange=fixrange)
     dimgs = params["dimgs"]
     
     #ffmpeg -i gif-tmp/image-%d-a.png -vcodec libx264 aout.mp4
