@@ -281,7 +281,7 @@ def full_frame(width=None, height=None):
 
 def generate_video(image, model, target, ae, temp_path="/tmp/gifsplanation", method="latentshift", target_filename=None, border=True, note="", show=False, watermark=True, ffmpeg_path="ffmpeg", fixrange=None):
     
-    params = compute_attribution(image.cuda(), method, model, target, ret_params=True, ae=ae, fixrange=fixrange)
+    params = compute_attribution(image, method, model, target, ret_params=True, ae=ae, fixrange=fixrange)
     dimgs = params["dimgs"]
     
     #ffmpeg -i gif-tmp/image-%d-a.png -vcodec libx264 aout.mp4
@@ -295,7 +295,7 @@ def generate_video(image, model, target, ae, temp_path="/tmp/gifsplanation", met
         if idx % 10 == 0:
             print(idx)
             
-        p = model(torch.from_numpy(dimg).cuda())[0,model.pathologies.index(target)].detach().cpu().numpy()
+        #p = model(torch.from_numpy(dimg))[0,model.pathologies.index(target)].detach().cpu().numpy()
 
         if border:
             px = 1/plt.rcParams['figure.dpi']
