@@ -1,0 +1,7 @@
+@article{cohen2021gif,
+title = {{Gifsplanation via Latent Shift: A Simple Autoencoder Approach to Counterfactual Generation for Chest X-rays}},
+author = {Cohen, Joseph Paul and Brooks, Rupert and En, Sovann and Zucker, Evan and Pareek, Anuj and Lungren, Matthew P. and Chaudhari, Akshay},
+journal = {Medical Imaging with Deep Learning},
+url = {https://arxiv.org/abs/2102.09475},
+year = {2021}
+}
